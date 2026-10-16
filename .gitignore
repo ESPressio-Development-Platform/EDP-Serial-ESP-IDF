@@ -426,3 +426,23 @@ FodyWeavers.xsd
 
 # Official VS Code C# Dev Kit Extension exclusion
 #*.lscache
+
+# ESP-IDF / PlatformIO cross-build artifacts
+.pio/
+.pioenvs/
+.piolibdeps/
+.platformio/
+build/
+cmake-build-*/
+CMakeFiles/
+CMakeCache.txt
+compile_commands.json
+sdkconfig
+sdkconfig.old
+sdkconfig.*.old
+*.elf
+*.map
+*.hex
+*.uf2
+*.bin
+.DS_Store

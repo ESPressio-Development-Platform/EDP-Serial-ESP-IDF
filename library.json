@@ -1,0 +1,32 @@
+{
+  "name": "EDP-Serial-ESP-IDF",
+  "version": "0.1.0",
+  "description": "ESP-IDF UART TX FIFO concrete provider composed into EDP-Serial",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ESPressio-Development-Platform/EDP-Serial-ESP-IDF.git"
+  },
+  "license": "Apache-2.0",
+  "frameworks": [
+    "espidf"
+  ],
+  "platforms": [
+    "espressif32"
+  ],
+  "build": {
+    "flags": [
+      "-std=gnu++20"
+    ],
+    "unflags": [
+      "-std=gnu++11",
+      "-std=gnu++14",
+      "-std=gnu++17"
+    ]
+  },
+  "dependencies": [
+    {
+      "name": "EDP-Serial",
+      "version": "0.1.0"
+    }
+  ]
+}

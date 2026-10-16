@@ -1,0 +1,36 @@
+name: ESP-IDF UART FIFO provider host contracts
+on:
+  push:
+    branches: [main, feature/logging-v1]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  uart-host:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        cxx: [g++, clang++]
+    steps:
+      - name: Checkout concrete provider
+        uses: actions/checkout@v4
+        with:
+          path: EDP-Serial-ESP-IDF
+      - name: Checkout EDP-Serial abstract owner
+        uses: actions/checkout@v4
+        with:
+          repository: ESPressio-Development-Platform/EDP-Serial
+          ref: feature/logging-v1
+          path: EDP-Serial
+      - name: Checkout EDP-System composition owner
+        uses: actions/checkout@v4
+        with:
+          repository: ESPressio-Development-Platform/EDP-System
+          ref: main
+          path: EDP-System
+      - name: C++20 abstract + UART fake-owner suite
+        env:
+          CXX: ${{ matrix.cxx }}
+          EDP_SERIAL_SOURCE_DIR: ${{ github.workspace }}/EDP-Serial
+          EDP_SYSTEM_SOURCE_DIR: ${{ github.workspace }}/EDP-System
+        run: bash EDP-Serial-ESP-IDF/tests/run_host_tests.sh
