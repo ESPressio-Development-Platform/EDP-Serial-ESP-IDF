@@ -10,3 +10,5 @@
 **Only ordinary context.** Firmware wire completion, peer receipt, archive durability, TX-ready wake and power-loss handling are NOT provided. Separate EDP-Serial composed FIFO/arbitration controls writer concurrency; uncoordinated native console writers can still interleave with it. Host tests use a fake `uart.h`; real ESP-IDF 5.5.5 ESP32 firmware ELF link PASSED RPI400 run **20261016T090824-aed310a8**; physical output and on-device timing still require separate validation.
 
 [README](../README.MD) • [Architecture](../docs/ARCHITECTURE.MD) • [Dependency Graph](../DEPENDENCY_GRAPH.MD).
+
+**Additional target builds:** ESP32-S3 ESP-IDF v5.5.5 full ELF link PASS `20261016T091324-d99b12b1`; integrated ESP32 canonical EDLG frame→Serial FIFO→real UART provider ELF link PASS `20261016T091604-f40040e3`. Both compiled without flashing any board; the integrated fixture uses a synthetic (non-production) Threading mutex.

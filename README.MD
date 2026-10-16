@@ -28,3 +28,8 @@
 **Still open:** ESP32 UART RX/loopback/scope tests and host capture of complete EDLG frames, baud/peripheral and console ownership, FreeRTOS scheduling/jitter, end-to-end accepted→wire→received guarantees, serial flush/power-loss semantics, full app Composition Bootstrap, Serial-Arduino concrete implementation, and target ESP32-S3 variant qualification. The native UART FIFO may be capacity-limited and callers must use the existing bounded retry/FIFO worker; there is no producer-blocking API or hidden Queue here.
 
 [Architecture](docs/ARCHITECTURE.MD) • [Dependency Graph](DEPENDENCY_GRAPH.MD) • [Wiki](wiki/Home.md).
+
+### Additional actual target build evidence (2026-10-16)
+
+- **ESP32-S3, ESP-IDF v5.5.5:** independent full firmware C++20 compile and ELF link **PASS** detached RPI400 run `20261016T091324-d99b12b1`. This is a variant build, NOT an on-device stopwatch/UART test.
+- **ESP32-WROOM-class end-to-end header/link smoke:** real C++20 EDP-Logging EDLG frame writer → optional EDP-Serial bounded FIFO → this concrete UART FIFO provider compiled and linked as **one ESP-IDF application** with actual EDP-System/Threading/Clock/Memory/Platform abstraction include components, **PASS** detached run `20261016T091604-f40040e3`. The fixture used a SYNTHETIC Composition mutex and a runtime-disabled write branch; it proves source/target linkage, NOT real FreeRTOS synchronization, delivery or physical UART throughput. Fixture source remains under `/srv/espressio/scratch/gpt6-serial-idf-build-smoke-20261016` and must NEVER be flashed as if it were a fully bootstrapped application.

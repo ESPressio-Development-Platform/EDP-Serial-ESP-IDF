@@ -21,3 +21,8 @@ No automatic ACK/flush, interruption/power-loss provenance, secure UART confiden
 ## Test and documentation ownership
 
 Host stub `tests/fake_idf/driver/uart.h` is used ONLY by `tests/run_host_tests.sh` and is forbidden in actual target builds. Native C++20 GCC/Clang tests verify typed provider semantics. The actual ESP-IDF component root `CMakeLists.txt` declares `REQUIRES esp_driver_uart edp_serial`, with the app providing the `edp_serial` component to expose EDP-Serial's public header and EDP-System transitive composition. A scratch RPI400 IDF v5.5.5 `esp32` app PASSED genuine firmware compile/ELF link (detached **20261016T090824-aed310a8**, exit 0), without flashing shared boards. See [README](../README.MD) and [Dependency Graph](../DEPENDENCY_GRAPH.MD).
+
+### Additional actual target build evidence (2026-10-16)
+
+- **ESP32-S3, ESP-IDF v5.5.5:** independent full firmware C++20 compile and ELF link **PASS** detached RPI400 run `20261016T091324-d99b12b1`. This is a variant build, NOT an on-device stopwatch/UART test.
+- **ESP32-WROOM-class end-to-end header/link smoke:** real C++20 EDP-Logging EDLG frame writer → optional EDP-Serial bounded FIFO → this concrete UART FIFO provider compiled and linked as **one ESP-IDF application** with actual EDP-System/Threading/Clock/Memory/Platform abstraction include components, **PASS** detached run `20261016T091604-f40040e3`. The fixture used a SYNTHETIC Composition mutex and a runtime-disabled write branch; it proves source/target linkage, NOT real FreeRTOS synchronization, delivery or physical UART throughput. Fixture source remains under `/srv/espressio/scratch/gpt6-serial-idf-build-smoke-20261016` and must NEVER be flashed as if it were a fully bootstrapped application.

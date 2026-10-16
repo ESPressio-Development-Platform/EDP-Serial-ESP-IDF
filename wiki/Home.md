@@ -9,3 +9,5 @@ The only public implementation is [UartFifoByteStreamWriter](Reference-serial_es
 [Architecture](../docs/ARCHITECTURE.MD) • [Dependency Graph](../DEPENDENCY_GRAPH.MD) • [Host tests](../tests/run_host_tests.sh).
 
 All host tests use a **fake UART**; an actual ESP-IDF v5.5.5 ESP32 compilation/ELF link PASSED on RPI400 detached run **20261016T090824-aed310a8**, with NO board flashing, and no shared development board has been flashed.
+
+**Additional target builds:** ESP32-S3 ESP-IDF v5.5.5 full ELF link PASS `20261016T091324-d99b12b1`; integrated ESP32 canonical EDLG frame→Serial FIFO→real UART provider ELF link PASS `20261016T091604-f40040e3`. Both compiled without flashing any board; the integrated fixture uses a synthetic (non-production) Threading mutex.
