@@ -2,6 +2,19 @@
 
 **Application-selected IDF-backed UART TX FIFO ByteStreamWriter concrete**, package `0.1.0`, maintained on `feature/logging-v1` until its independently qualified `main` promotion. The native UART API is available under supported ESP-IDF and IDF-backed Arduino-ESP32 framework configurations; build and physical acceptance remain separate. The upstream **EDP-Serial** abstraction remains platform-neutral; no EDP-Logging or Serial-ESP-IDF code was imported into foundation or other abstract EDP owners.
 
+## Dependencies
+
+This **concrete IDF-backed** repository imports EDP-Serial directly, which imports EDP-System's Composition capability. Its native target SDK must provide `esp_driver_uart`; no reverse dependency on this concrete is allowed from EDP-Serial or EDP-Logging.
+
+```text
+EDP-Serial-ESP-IDF [ESP32 IDF-backed UART concrete]
+├── EDP-Serial [mandatory abstract ByteStreamWriter]
+│   └── EDP-System [mandatory Composition]
+└── ESP-IDF esp_driver_uart [mandatory native target SDK, not an EDP library]
+```
+
+Optional full framed output is **not auto-activated**: an application importing EDP-Serial's `EdlgFramePump` must separately declare EDP-Logging, while importing its `BoundedEdlgFrameQueue` additionally selects the EDP-Threading ordinary Mutex graph. The native UART driver is selected/configured by Bootstrap with **TX software ring = 0**; Arduino-ESP32 eligibility requires an IDF-backed compatible core and does not imply a generic Arduino provider. See [Dependency Graph](./DEPENDENCY_GRAPH.MD) and [Wiki Dependency Contracts](./wiki/Dependency-Contracts.md). All EDP libraries remain **0.1.0**.
+
 ## Purpose and public composition contract
 
 `#include <ESPressio_Serial_ESP_IDF.hpp>` provides `ESPressio::Serial::ESP_IDF::UartFifoByteStreamWriter`, a concrete EDP-System Composition `Provider<Serial::Domain,Offers<Offer<Serial::ByteStreamWriter>>>`, with typed `ByteWriteResult TryWrite(std::span<const std::byte>) noexcept`. The class is non-copyable, non-movable, and constructed explicitly with one **application-selected `uart_port_t`** (e.g. `UART_NUM_1`). It exposes `Port()` for inspection. No UART peripheral, pins, baud, driver, native Queue, IRQ, global console, DMA buffer or worker is silently allocated here.
