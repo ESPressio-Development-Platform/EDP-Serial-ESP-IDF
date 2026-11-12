@@ -446,3 +446,31 @@ sdkconfig.*.old
 *.uf2
 *.bin
 .DS_Store
+
+# ESPressio V2: macOS local filesystem/metadata
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+.Spotlight-V100/
+.Trashes/
+.fseventsd/
+.TemporaryItems/
+__MACOSX/
+
+# Windows Explorer/filesystem metadata
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+ehthumbs_vista.db
+Desktop.ini
+$RECYCLE.BIN/
+*.lnk
+
+# PlatformIO generated, locally downloaded/resolved artefacts
+.pio/
+.pioenvs/
+.piolibdeps/
+.platformio/
+platformio_override.ini
+**/.pio/
