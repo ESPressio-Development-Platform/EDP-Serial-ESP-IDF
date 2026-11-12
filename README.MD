@@ -1,6 +1,6 @@
 # EDP-Serial-ESP-IDF
 
-**Initial concrete ESP-IDF UART TX FIFO ByteStreamWriter**, package `0.1.0`, isolated branch `feature/logging-v1`. The upstream **EDP-Serial** abstraction remains platform-neutral; no EDP-Logging or Serial-ESP-IDF code was imported into foundation or other abstract EDP owners.
+**Application-selected IDF-backed UART TX FIFO ByteStreamWriter concrete**, package `0.1.0`, maintained on `feature/logging-v1` until its independently qualified `main` promotion. The native UART API is available under supported ESP-IDF and IDF-backed Arduino-ESP32 framework configurations; build and physical acceptance remain separate. The upstream **EDP-Serial** abstraction remains platform-neutral; no EDP-Logging or Serial-ESP-IDF code was imported into foundation or other abstract EDP owners.
 
 ## Purpose and public composition contract
 
@@ -16,7 +16,7 @@
 
 - **Mandatory direct EDP library:** `EDP-Serial` `0.1.0` (which consumes `EDP-System` Composition).
 - **Platform-only SDK dependency:** ESP-IDF **`esp_driver_uart`** component. The owner `CMakeLists.txt` declares `REQUIRES esp_driver_uart edp_serial`, where the application must provide a CMake component named `edp_serial` exposing the actual EDP-Serial abstract headers (and its dependent EDP-System headers). No legacy `ESPressio-*` library is permitted.
-- PlatformIO metadata `library.json` declares package `0.1.0`, `frameworks: [espidf]`, `platforms: [espressif32]`, and **EDP-Serial** dependency. This project is not for Arduino-only compilation.
+- PlatformIO metadata `library.json` declares package `0.1.0`, `frameworks: [arduino, espidf]`, `platforms: [espressif32]`, and **EDP-Serial** dependency. A C++20-compatible **ESP32 Arduino core exposing the ESP-IDF 5.x UART driver** may also instantiate this exact native provider. This is not an Arduino-generic transport and is unrelated to the empty `EDP-Serial-Arduino` placeholder; incompatible Arduino platforms must be rejected.
 - **Optional application dependency:** if using `serial/BoundedEdlgFrameQueue.hpp`, the application additionally explicitly declares `EDP-Logging` and `EDP-Threading` as specified by EDP-Serial's conditional dependency graph.
 
 ## Tests and outstanding qualification
@@ -33,3 +33,9 @@
 
 - **ESP32-S3, ESP-IDF v5.5.5:** independent full firmware C++20 compile and ELF link **PASS** detached RPI400 run `20261016T091324-d99b12b1`. This is a variant build, NOT an on-device stopwatch/UART test.
 - **ESP32-WROOM-class end-to-end header/link smoke:** real C++20 EDP-Logging EDLG frame writer → optional EDP-Serial bounded FIFO → this concrete UART FIFO provider compiled and linked as **one ESP-IDF application** with actual EDP-System/Threading/Clock/Memory/Platform abstraction include components, **PASS** detached run `20261016T091604-f40040e3`. The fixture used a SYNTHETIC Composition mutex and a runtime-disabled write branch; it proves source/target linkage, NOT real FreeRTOS synchronization, delivery or physical UART throughput. Fixture source remains under `/srv/espressio/scratch/gpt6-serial-idf-build-smoke-20261016` and must NEVER be flashed as if it were a fully bootstrapped application.
+
+## V2 demonstrations and public-release readiness — 12 November 2026
+
+[UartFifoByteStreamWriter](demos/UartFifoByteStreamWriter/README.MD) provides all **three V2 example layouts**: Arduino IDE using the ESP32 Arduino core's underlying IDF UART API, PlatformIO Arduino-ESP32, and native PlatformIO ESP-IDF. The **safe default does not install a UART driver, select TX/RX pins, write to the system console or flash a device**. Opting into actual native TX requires the application to provide both `EDP_SERIAL_DEMO_TX_GPIO` and `EDP_SERIAL_DEMO_RX_GPIO`, reserve UART1/pins exclusively, and accept that a nonblocking `uart_tx_chars` result confirms only native FIFO acceptance, **not** delivery to a host. Full native target compile/link against real current framework libraries, physical UART loopback and scope/host capture are separate qualification gates; a committed sketch alone proves none of these.
+
+The [0.1.0 changelog](CHANGELOG.md), [V2 developer Wiki](wiki/Home.md) and [source dependency graph](DEPENDENCY_GRAPH.MD) document the exact provider ownership. No version bump or release tag is implied. Downstream full EDLG Serial/Logging application assembly must also acquire a real keyed Threading Mutex; the bundled Serial queue demo's simulated single-context Mutex is never a production Threading concrete.

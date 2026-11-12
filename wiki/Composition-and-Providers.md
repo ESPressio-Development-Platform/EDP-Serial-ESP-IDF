@@ -1,0 +1,5 @@
+# Bootstrap Composition and native UART ownership
+
+Application chooses `uart_port_t`, validates target pin availability, configures `uart_param_config` with supported clock/baud/line parameters, `uart_set_pin`, and installs `uart_driver_install(port, rxRingBytes, /*txRingBytes=*/0, ...)` before a `UartFifoByteStreamWriter` can accept any real bytes. EDP-Serial's EDP-System `Serial::ByteStreamWriterRequirement` then selects exactly this provider for the application's intended Serial Domain instance; separate writer arbitration is required when multiple Tasks exist. The provider object and installed driver must remain valid through all accepted-frame pump and queue attempts and native drain; shutting down early can lose already accepted but not transmitted bytes.
+
+The optional [safe demo](../demos/UartFifoByteStreamWriter/README.MD) does not install hardware by default. A **separately explicit** `EDP_SERIAL_DEMO_TX_GPIO` and `EDP_SERIAL_DEMO_RX_GPIO` opts in to UART1 setup and a single nonblocking try, but *not* received-wire acknowledgement. On a shared appliance, do not enable it until physical wiring, console ownership and rate are confirmed.

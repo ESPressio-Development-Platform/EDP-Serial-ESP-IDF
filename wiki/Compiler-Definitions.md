@@ -1,0 +1,5 @@
+# Compiler definitions and target conditional policy
+
+This package uses C++20 and includes ESP-IDF `driver/uart.h`, so it is eligible **only** on ESP32 native ESP-IDF or ESP32 Arduino cores whose actual underlying IDF driver contract is compatible. The package CMake file explicitly requires `esp_driver_uart` and the consuming `edp_serial` application component; the PlatformIO manifest exposes selected `frameworks=[arduino,espidf]` for real IDF-backed cores only. The PIO demos pin PIOArduino and remove obsolete `-std=gnu++11/14/17` before selecting `-std=gnu++20`.
+
+**Production `src/` contains no macro-selected provider variants**, no default Console port or automatic UART install. The safe demo alone supports `EDP_SERIAL_DEMO_TX_GPIO` and `EDP_SERIAL_DEMO_RX_GPIO`, both required to enter the hardware install-and-try block. These are **demo-only** flags, undefined by default; no physical GPIO or serial output is enabled by a repository build. They must not be confused with a Logger severity or platform-wide boot configuration flag.

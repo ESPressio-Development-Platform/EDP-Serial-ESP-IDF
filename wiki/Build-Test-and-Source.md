@@ -1,0 +1,7 @@
+# ESP-IDF UART provider source, demos and qualification
+
+**Actual source:** [umbrella](Reference-serial_esp_idf-ESPressio_Serial_ESP_IDF), [UartFifoByteStreamWriter](Reference-serial_esp_idf-UartFifoByteStreamWriter), [Reference Index](Reference-Index). GCC/Clang host `tests/run_host_tests.sh` substitutes a fake IDF `uart.h` while including the *real* EDP-Serial/System headers and tests invalid port, driver absent, full FIFO, one partial accepted count, unexpected native error and exact Composition contract.
+
+Native full ESP-IDF 5.5.5 ESP32 and ESP32-S3 source/ELF builds passed the named RPI400 October fixtures `20261016T090824-aed310a8`, `20261016T091324-d99b12b1` and full Logging→Serial→UART link fixture `20261016T091604-f40040e3`. These were **compile/link only**, no board flashed, no physical host capture, and the last fixture's Threading Mutex was synthetic.
+
+The new [three-layout UartFifoByteStreamWriter demo](../demos/UartFifoByteStreamWriter/README.MD) has Arduino IDE (ESP32 core/IDF driver), PlatformIO Arduino and PlatformIO ESP-IDF source. It defaults to zero native UART activity; real pin setup is opt-in. **Its current PIO builds are NOT qualified until actual new run results are recorded.** No selected SDK runtime guarantees real TX wire ownership, uninterrupted bytes, sleep latency, host receipt or Flash durability without separate hardware evidence.

@@ -1,0 +1,5 @@
+# Public IDF-backed UART provider API
+
+[UartFifoByteStreamWriter](Reference-serial_esp_idf-UartFifoByteStreamWriter) is the single supported concrete. Explicit `UartFifoByteStreamWriter(uart_port_t port) noexcept` stores only caller-selected native UART port, does not allocate/install any hardware and is noncopyable/nonmovable. `Port() const noexcept` reports that native identity without mutation. `TryWrite(std::span<const std::byte>) noexcept -> EDP-Serial::ByteWriteResult` validates port and installed driver, reports empty zero-length input as Accepted=0, otherwise performs one bounded `uart_tx_chars`; positive accepted count maps to Accepted, exactly zero to WouldBlock, and invalid/error/out-of-range to ProviderFailure. `static_assert(ByteWriteEndpoint<UartFifoByteStreamWriter>)` enforces the abstract source contract.
+
+There is **no** public UART install, `Flush`, `WaitUntil`, IRQ, DMA ownership, Queue, worker, serialisation codec or Logging schema API in this repository. Application code must not substitute native FIFO acceptance for wire receipt.

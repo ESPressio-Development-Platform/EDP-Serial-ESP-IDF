@@ -1,0 +1,5 @@
+# Resource, lifecycle, concurrency and failure invariants
+
+Heap retained by ESPressio adapter: **zero**; only a `uart_port_t _port` instance field. Native UART driver's RX ring, interrupt and FIFO belong to IDF and the application's installation contract, **not** to this object. `TryWrite` has a bounded one-native-call structure and is ordinary-context only; ISR and arbitrary task-lock fairness are unqualified.
+
+Potentially concurrent Tasks require a distinct EDP-Threading keyed mutex/FIFO or comparable exclusive Bootstrap arbitration; direct `printf`, Arduino HardwareSerial and console writes to the selected port can interleave complete EDLG frames if not excluded. On shutdown, the application must handle TX drain/host acknowledgement if it matters, stop new producers, join workers, reconcile accepted-but-not-transmitted bytes, delete native driver and only then destroy the provider. `uart_tx_chars` merely copies a prefix into native TX FIFO, so a power cut may lose those bytes. No automatic on-wire completion, durable archive, memory lifetime guarantee or physical host capture is offered.
