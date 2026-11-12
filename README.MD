@@ -1,6 +1,6 @@
 # EDP-Serial-ESP-IDF
 
-**Application-selected IDF-backed UART TX FIFO ByteStreamWriter concrete**, package `0.1.0`, maintained on `feature/logging-v1` until its independently qualified `main` promotion. The native UART API is available under supported ESP-IDF and IDF-backed Arduino-ESP32 framework configurations; build and physical acceptance remain separate. The upstream **EDP-Serial** abstraction remains platform-neutral; no EDP-Logging or Serial-ESP-IDF code was imported into foundation or other abstract EDP owners.
+**Application-selected IDF-backed UART TX FIFO ByteStreamWriter concrete**, package `0.1.0`, with the EDP-Serial abstraction selected from `main`. The native UART API is available under supported ESP-IDF and IDF-backed Arduino-ESP32 framework configurations; build and physical acceptance remain separate. The upstream **EDP-Serial** abstraction remains platform-neutral; no EDP-Logging or Serial-ESP-IDF code was imported into foundation or other abstract EDP owners.
 
 ## Dependencies
 
@@ -13,7 +13,7 @@ EDP-Serial-ESP-IDF [ESP32 IDF-backed UART concrete]
 └── ESP-IDF esp_driver_uart [mandatory native target SDK, not an EDP library]
 ```
 
-Optional full framed output is **not auto-activated**: an application importing EDP-Serial's `EdlgFramePump` must separately declare EDP-Logging, while importing its `BoundedEdlgFrameQueue` additionally selects the EDP-Threading ordinary Mutex graph. The native UART driver is selected/configured by Bootstrap with **TX software ring = 0**; Arduino-ESP32 eligibility requires an IDF-backed compatible core and does not imply a generic Arduino provider. See [Dependency Graph](./DEPENDENCY_GRAPH.MD) and [Wiki Dependency Contracts](./wiki/Dependency-Contracts.md). All EDP libraries remain **0.1.0**.
+Optional full framed output is **not auto-activated**: an application importing EDP-Serial's `EdlgFramePump` must separately declare EDP-Logging, while importing its `BoundedEdlgFrameQueue` additionally selects the EDP-Threading ordinary Mutex and EDP-Platform SpinLock contracts. The native UART driver is selected/configured by Bootstrap with **TX software ring = 0**; Arduino-ESP32 eligibility requires an IDF-backed compatible core and does not imply a generic Arduino provider. See [Dependency Graph](./DEPENDENCY_GRAPH.MD) and [Wiki Dependency Contracts](./wiki/Dependency-Contracts.md). All EDP libraries remain **0.1.0**.
 
 ## Purpose and public composition contract
 
@@ -49,6 +49,6 @@ Optional full framed output is **not auto-activated**: an application importing 
 
 ## V2 demonstrations and public-release readiness — 12 November 2026
 
-[UartFifoByteStreamWriter](demos/UartFifoByteStreamWriter/README.MD) provides all **three V2 example layouts**: Arduino IDE using the ESP32 Arduino core's underlying IDF UART API, PlatformIO Arduino-ESP32, and native PlatformIO ESP-IDF. The **safe default does not install a UART driver, select TX/RX pins, write to the system console or flash a device**. Opting into actual native TX requires the application to provide both `EDP_SERIAL_DEMO_TX_GPIO` and `EDP_SERIAL_DEMO_RX_GPIO`, reserve UART1/pins exclusively, and accept that a nonblocking `uart_tx_chars` result confirms only native FIFO acceptance, **not** delivery to a host. Full native target compile/link against real current framework libraries, physical UART loopback and scope/host capture are separate qualification gates; a committed sketch alone proves none of these.
+[UartFifoByteStreamWriter](demos/UartFifoByteStreamWriter/README.MD) provides all **three V2 example layouts**: Arduino IDE using the ESP32 Arduino core's underlying IDF UART API, PlatformIO Arduino-ESP32, and native PlatformIO ESP-IDF. The **safe default does not install a UART driver, select TX/RX pins, write to the system console or flash a device**. Opting into actual native TX requires the application to provide both `EDP_SERIAL_DEMO_TX_GPIO` and `EDP_SERIAL_DEMO_RX_GPIO`, reserve UART1/pins exclusively, and accept that a nonblocking `uart_tx_chars` result confirms only native FIFO acceptance, **not** delivery to a host. RPI400 run `20261112T115923-1e73e5a0` passed the GCC and Clang host checks and both actual Arduino-ESP32 and ESP-IDF demo firmware builds. The demo's default path uses `UART_NUM_MAX` to check the invalid-port result without installing a driver. Physical UART delivery is exercised in the separately composed Logging G1 fixture.
 
 The [0.1.0 changelog](CHANGELOG.md), [V2 developer Wiki](wiki/Home.md) and [source dependency graph](DEPENDENCY_GRAPH.MD) document the exact provider ownership. No version bump or release tag is implied. Downstream full EDLG Serial/Logging application assembly must also acquire a real keyed Threading Mutex; the bundled Serial queue demo's simulated single-context Mutex is never a production Threading concrete.

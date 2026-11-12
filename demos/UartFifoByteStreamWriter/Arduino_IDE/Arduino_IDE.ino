@@ -22,7 +22,7 @@ namespace Demo {
             std::byte{'O'}, std::byte{'K'}
         };
 
-        UartFifoByteStreamWriter invalid(static_cast<uart_port_t>(-1));
+        UartFifoByteStreamWriter invalid(UART_NUM_MAX);
         if (invalid.TryWrite(bytes).Status !=
             Serial::ByteWriteStatus::ProviderFailure) {
             return 1;

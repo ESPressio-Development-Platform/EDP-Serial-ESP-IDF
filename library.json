@@ -27,7 +27,7 @@
   "dependencies": [
     {
       "name": "EDP-Serial",
-      "version": "0.1.0"
+      "version": "https://github.com/ESPressio-Development-Platform/EDP-Serial.git#main"
     }
   ]
 }

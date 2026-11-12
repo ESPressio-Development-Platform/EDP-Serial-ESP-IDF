@@ -65,7 +65,7 @@ int main() {
         Serial::ByteWriteStatus::Accepted);
     assert(calls==priorCalls);
 
-    IDF::UartFifoByteStreamWriter invalid(static_cast<uart_port_t>(99));
+    IDF::UartFifoByteStreamWriter invalid(UART_NUM_MAX);
     const auto priorChecks=installedCalls;
     assert(invalid.TryWrite(payload).Status==Serial::ByteWriteStatus::ProviderFailure);
     assert(installedCalls==priorChecks);

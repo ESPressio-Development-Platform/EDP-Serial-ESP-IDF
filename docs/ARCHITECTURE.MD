@@ -1,6 +1,6 @@
 # EDP-Serial-ESP-IDF Architecture — first concrete UART FIFO provider
 
-**Package `0.1.0`, feature `feature/logging-v1`, ESP-IDF v5.5.5 native target validated separately.**
+**Package `0.1.0`.** The EDP-Serial package comes from `main`.
 
 The only concrete type is `Serial::ESP_IDF::UartFifoByteStreamWriter` in `src/serial_esp_idf/UartFifoByteStreamWriter.hpp`, imported via `ESPressio_Serial_ESP_IDF.hpp`. It inherits the **existing** EDP-System CompositionFramework provider offering **EDP-Serial::ByteStreamWriter**, and uses the actual ESP-IDF **`esp_driver_uart`** SDK in this *platform-specific owner*, not in EDP-Serial/EDP-Logging/EDP-System.
 
@@ -16,7 +16,7 @@ For complete framed logs the app must also select **EDP-Serial's optional Bounde
 
 A caller must not uninstall/reconfigure a UART while a TryWrite is in flight, nor use a TX ring buffer with `uart_tx_chars`. Multiple application writers need the separately composed Serial FIFO/worker; this native provider itself does not serialize competing writers or label log records. If UART driver is absent or port invalid, it returns ProviderFailure without invoking `uart_tx_chars`. When FIFO space is zero, it returns WouldBlock immediately and relies on the owner worker to retry, never spins. If native function reports inconsistent count, fails closed.
 
-No automatic ACK/flush, interruption/power-loss provenance, secure UART confidentiality, complete LogRecord Typed Envelope, physical timing/scope traces, ESP32-S3 target build or Serial-Arduino port is implemented. These must be separately qualified.
+No automatic ACK/flush, interruption/power-loss provenance, secure UART confidentiality, complete LogRecord Typed Envelope, physical timing/scope traces, on-device ESP32-S3 execution or a generic Serial-Arduino port is supplied by this provider. These must be separately qualified.
 
 ## Test and documentation ownership
 

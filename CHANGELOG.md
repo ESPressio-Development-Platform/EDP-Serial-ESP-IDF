@@ -1,6 +1,6 @@
 # EDP-Serial-ESP-IDF Changelog
 
-All versions remain **0.1.0**. This is untagged feature-branch work until independently qualified demo and V2 owner review.
+All versions remain **0.1.0**. These changes are untagged.
 
 ## Unreleased — 0.1.0
 
@@ -11,6 +11,11 @@ All versions remain **0.1.0**. This is untagged feature-branch work until indepe
 - Native ESP-IDF 5.5.5 ESP32 and ESP32-S3 target compile/link smoke tests and independent GCC/Clang fake UART host tests, previously recorded in October; no physical port was automatically configured.
 - Three source-specific V2 demonstrations under `demos/UartFifoByteStreamWriter/` for Arduino IDE/PlatformIO Arduino-ESP32/PlatformIO ESP-IDF, with safe default and explicit opt-in pin configuration; selected ESP32 Arduino-IDF-backed framework compatibility is subject to actual target qualification.
 - Repository-local V2 reference Wiki, source/resource/Composition ownership, target build and dependency documentation.
+
+### Release integration
+
+- The package manifest and host workflow select EDP-Serial from `main`.
+- The demos and host regression use the SDK's declared `UART_NUM_MAX` invalid-port sentinel. RPI400 passed both host compilers and both native demo builds.
 
 ### Deliberate exclusions
 
