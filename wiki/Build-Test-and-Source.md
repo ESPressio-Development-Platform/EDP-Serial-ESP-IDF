@@ -13,3 +13,11 @@ URLs. The source/profile migration and exact isolated-build receipts are
 tracked in the [Policy handoff](https://github.com/ESPressio-Development-Platform/Policy/blob/main/Handoff/2026-11-19/2026-11-19-09-25-Logging-Estate-Demo-GitHub-Dependencies.MD).
 These recipe builds are separate from earlier physical UART/archive
 qualification. No fresh hardware execution is implied.
+
+Both GitHub-resolved UART demo recipes passed on19 November2026:
+Arduino case in20261119T094437-9c5c966d and native case in
+20261119T094437-f381dc01. Qualification uses actual per-case PASS
+markers, current/tested manifest equality and linked firmware in isolated
+demo-only inputs. The safe default is unchanged. Private dependencies
+were installed through the appliance's authorized GitHub transport cache;
+no new UART execution or physical delivery claim follows from these builds.
