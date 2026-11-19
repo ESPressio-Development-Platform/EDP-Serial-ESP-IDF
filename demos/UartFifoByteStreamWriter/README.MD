@@ -15,3 +15,19 @@ The source is identical except for `setup()/loop()` vs `app_main()`. The package
 Define **both** `EDP_SERIAL_DEMO_TX_GPIO` and `EDP_SERIAL_DEMO_RX_GPIO` at build time **after** verifying selected physical pins are available and UART1 belongs exclusively to this application. The sample then chooses 115200 8N1, calls the real IDF `uart_param_config`, `uart_set_pin`, `uart_driver_install` with a **zero TX ring** and a bounded 256-byte RX ring, attempts **one** immediate `TryWrite` of the two-byte illustrative payload, and deletes its native driver. It never spins while TX FIFO is full. The exact native result can be `Accepted` or `WouldBlock`; even Accepted means **copied to hardware TX FIFO**, not observed on wire, captured remotely, flushed or durably persisted.
 
 **No pins are supplied or inferred by ESPressio.** Any future genuine loopback/host capture qualification requires an authorised independent pin map/wire setup, as well as timing and ownership tests. Do not flash with this opt-in mode enabled on a shared device until its port/pin ownership and buffering are verified. Package versions remain 0.1.0.
+
+## PlatformIO dependency setup
+
+The two PlatformIO manifests declare GitHub URLs in lib_deps.
+Keep this demo's repository-owned source and project assets together,
+then run either command from the repository root:
+
+```sh
+pio run -d demos/UartFifoByteStreamWriter/PlatformIO_Arduino
+pio run -d demos/UartFifoByteStreamWriter/PlatformIO_ESP-IDF
+```
+
+PlatformIO downloads the libraries; sibling library checkouts and local
+dependency path overrides are unnecessary. Arduino-ESP32 selects the
+qualified3.3.12 framework and ESP-IDF5.5 library bundle. Project-owned
+partition files and build hooks are resolved within the demo itself.

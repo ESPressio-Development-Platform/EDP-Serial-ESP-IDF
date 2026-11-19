@@ -27,6 +27,12 @@ Optional full framed output is **not auto-activated**: an application importing 
 
 ## Dependencies and build
 
+PlatformIO demo projects declare their library dependencies as GitHub URLs
+in lib_deps. Run their pio commands directly with the repository-owned demo
+source/assets present; dependency resolution does not require sibling
+library checkouts. See the [demo index](./demos/README.MD).
+
+
 - **Mandatory direct EDP library:** `EDP-Serial` `0.1.0` (which consumes `EDP-System` Composition).
 - **Platform-only SDK dependency:** ESP-IDF **`esp_driver_uart`** component. The owner `CMakeLists.txt` declares `REQUIRES esp_driver_uart edp_serial`, where the application must provide a CMake component named `edp_serial` exposing the actual EDP-Serial abstract headers (and its dependent EDP-System headers). No legacy `ESPressio-*` library is permitted.
 - PlatformIO metadata `library.json` declares package `0.1.0`, `frameworks: [arduino, espidf]`, `platforms: [espressif32]`, and **EDP-Serial** dependency. A C++20-compatible **ESP32 Arduino core exposing the ESP-IDF 5.x UART driver** may also instantiate this exact native provider. This is not an Arduino-generic transport and is unrelated to the empty `EDP-Serial-Arduino` placeholder; incompatible Arduino platforms must be rejected.

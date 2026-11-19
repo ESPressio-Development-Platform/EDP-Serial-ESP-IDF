@@ -16,3 +16,11 @@ This is a platform-specific **concrete consumer of abstract EDP-Serial**. EDP-Se
 **Optional separately activated app graph:** `EDP-Serial::BoundedEdlgFrameQueue.hpp` adds EDP-Logging, EDP-Threading and EDP-Platform direct abstract dependencies as described in EDP-Serial DEPENDENCY_GRAPH.MD; they are NOT auto-imported by this provider. Do not assume hidden dependency resolution.
 
 **Target limits:** `esp_driver_uart` is present in ESP-IDF v5.5.5 installed toolchain. Real hardware output, target variant coverage, native driver install and console sharing require separate HIL qualification.
+
+## PlatformIO demo source resolution
+
+The demo manifests express their selected direct and supporting owner
+closure through explicit GitHub lib_deps URLs. The library's production
+dependency activation above is unchanged. Project-local source, partition
+files and framework setup hooks are application assets; dependencies are
+downloaded by PlatformIO.

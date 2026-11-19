@@ -1,5 +1,11 @@
 # EDP-Serial-ESP-IDF Changelog
 
+## Demo dependency portability — unreleased0.1.0
+
+- PlatformIO demos now resolve library dependencies from explicit GitHub URLs.
+- Removed symlink and sibling-header dependency bypasses and reconciled consumer build guidance.
+- Arduino recipes retain the qualified framework/library bundle; native provider selection stays explicit.
+
 All versions remain **0.1.0**. These changes are untagged.
 
 ## Unreleased — 0.1.0
