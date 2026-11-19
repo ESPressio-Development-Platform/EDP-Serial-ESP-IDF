@@ -21,3 +21,31 @@ markers, current/tested manifest equality and linked firmware in isolated
 demo-only inputs. The safe default is unchanged. Private dependencies
 were installed through the appliance's authorized GitHub transport cache;
 no new UART execution or physical delivery claim follows from these builds.
+
+## Progressive README example qualification — 19 November 2026
+
+The root [consumer walkthrough](../README.MD#getting-started) now contains
+a complete native ESP-IDF application, with GitHub dependency URLs, explicit
+application pins, zero TX software ring, accepted-prefix service, a finite
+service-opportunity budget and guarded TX drain/driver release.
+
+RPI400 run `20261119T111957-fc6faf2d` passed:
+
+- Extraction of the exact README C++ block and an actual ESP32 Xtensa C++20
+  syntax compile against ESP-IDF 5.5.5 headers/configuration.
+- The unchanged provider's GCC and Clang host suites using real Serial/System.
+- Eleven scripted SDK/application lifecycle scenarios with each host compiler:
+  success, partial acceptance plus backpressure, exhausted service budget,
+  failure after a prefix, invalid native count, already-owned UART,
+  configuration failure, pin failure, installation failure, unconfirmed
+  drain and driver-release failure.
+- README relative links, discoverability of the current docs, whitespace
+  checks and unchanged runtime/package/demo source.
+
+The first syntax harness attempt lacked the native UART component include
+path and failed before compiling the application. The passing run adds
+include paths from the same actual target SDK compilation database and the
+UART component. This was a harness correction, not a provider/API correction.
+This documentation qualification does not claim a fresh firmware link,
+upload, physical UART capture or hardware timing result. Earlier qualified
+demo builds and physical application evidence retain their original scope.

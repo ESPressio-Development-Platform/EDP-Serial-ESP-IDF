@@ -1,5 +1,11 @@
 # EDP-Serial-ESP-IDF Changelog
 
+## Consumer README — unreleased 0.1.0
+
+- Replaced stale implementation history with a progressive native ESP-IDF UART usage guide and complete code.
+- Documented explicit pin selection, zero TX ring, partial progress, bounded backpressure, local TX completion and guarded driver release.
+- Revalidated the full mandatory/optional dependency closure and consumer documentation navigation; runtime and version unchanged.
+
 ## Demo dependency portability — unreleased0.1.0
 
 - PlatformIO demos now resolve library dependencies from explicit GitHub URLs.

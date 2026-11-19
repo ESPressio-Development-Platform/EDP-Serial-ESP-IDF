@@ -5,3 +5,5 @@ This repository owns the **concrete ESP-IDF native UART TX FIFO** EDP-Serial Byt
 Start with [Architecture](Architecture), [Dependency Contracts](Dependency-Contracts), [Public API](Public-API), [Internal API](Internal-API), [Private Implementation](Private-Implementation), [Composition and Providers](Composition-and-Providers), [Resources and Lifecycle](Resources-and-Lifecycle), [Compiler Definitions](Compiler-Definitions), [Build/Test/Source](Build-Test-and-Source), [Tooling](Tooling-Reference) or the complete [Reference Index](Reference-Index). The implementation reference is [UartFifoByteStreamWriter](Reference-serial_esp_idf-UartFifoByteStreamWriter); its default [three-target demo](../demos/UartFifoByteStreamWriter/README.MD) does not select hardware or emit UART bytes.
 
 A successful compiler link is **not** physical UART loopback/host capture or durability; native FIFO acceptance never guarantees the last bit reached a peer.
+
+For a first application, follow the [progressive UART walkthrough](../README.MD#getting-started): explicit pins/zero TX ring, accepted-prefix service, bounded backpressure, local TX drain and application-owned release.

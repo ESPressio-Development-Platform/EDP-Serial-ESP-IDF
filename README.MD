@@ -1,60 +1,320 @@
 # EDP-Serial-ESP-IDF
 
-**Application-selected IDF-backed UART TX FIFO ByteStreamWriter concrete**, package `0.1.0`, with the EDP-Serial abstraction selected from `main`. The native UART API is available under supported ESP-IDF and IDF-backed Arduino-ESP32 framework configurations; build and physical acceptance remain separate. The upstream **EDP-Serial** abstraction remains platform-neutral; no EDP-Logging or Serial-ESP-IDF code was imported into foundation or other abstract EDP owners.
+Nonblocking ESP32 UART byte output for the [ESPressio Development Platform](https://github.com/ESPressio-Development-Platform).
+**C++20 · Version 0.1.0 · Apache-2.0**
+
+`UartFifoByteStreamWriter` connects EDP-Serial's portable byte-writing
+contract to the ESP-IDF UART hardware TX FIFO. It works with native ESP-IDF
+and qualified IDF-backed Arduino-ESP32 cores.
+
+- Write bytes through the existing `ByteStreamWriter` Composition capability.
+- Inspect the exact accepted prefix and distinguish backpressure from failure.
+- Use the same endpoint with EDP-Serial's optional EDLG frame pump or bounded queue.
+
+The application selects the UART, pins and baud, installs its driver and owns
+its lifetime. The provider performs one immediate FIFO write per `TryWrite`;
+it creates no driver, worker or queue. Acceptance means copied into the UART
+FIFO. Physical transmission, peer receipt and durable storage are separate
+outcomes.
+
+## Getting started
+
+This walkthrough builds a native ESP-IDF application that writes `Hello\n`
+to an application-selected UART1. It then waits for local TX completion
+before releasing the driver. It deliberately limits service attempts and
+retains progress if output cannot finish.
+
+### 1. Create a PlatformIO ESP-IDF project
+
+Save this as `platformio.ini`. All library dependencies resolve from GitHub;
+configure Git authentication separately if your account requires it.
+
+```ini
+[env:esp32dev]
+platform = https://github.com/pioarduino/platform-espressif32.git#d41d8383706dc146fd91a0e1d3c59a915a4d493e
+board = esp32dev
+framework = espidf
+
+build_unflags =
+    -std=gnu++11
+    -std=gnu++14
+    -std=gnu++17
+build_flags =
+    -std=gnu++20
+    -DTUTORIAL_UART_TX_GPIO=17
+    -DTUTORIAL_UART_RX_GPIO=16
+
+lib_deps =
+    https://github.com/ESPressio-Development-Platform/EDP-Serial-ESP-IDF.git#main
+    https://github.com/ESPressio-Development-Platform/EDP-Serial.git#main
+    https://github.com/ESPressio-Development-Platform/EDP-System.git#main
+```
+
+The platform revision is the qualified ESP32 toolchain selection. Library
+`main` references follow ongoing 0.1.0 development; pin reviewed commit SHAs
+when your application needs reproducible inputs.
+
+### 2. Reserve the UART and choose pins
+
+GPIO17 TX and GPIO16 RX are illustrative selections for an ESP32-WROOM-class
+board. Check your board's wiring and pin restrictions, then change both build
+definitions to unused pins. Reserve UART1 and these pins exclusively for this
+application. Keep the console on a different UART.
+
+For a compatible 3.3 V UART receiver, connect the selected TX to the receiver's
+RX and share ground. Never connect RS-232 voltage levels directly to ESP32
+pins. The example configures 115200 baud, eight data bits, no parity, one stop
+bit and no hardware flow control.
+
+Install the driver with **TX software ring-buffer size zero**. This is required
+by `uart_tx_chars`, the native operation used by this provider. The RX buffer
+below is 256 bytes; it does not enable a TX software queue.
+
+### 3. Configure the driver and write a message
+
+Save the complete program below as `src/main.cpp`. Setup belongs to the
+application's ESP-IDF entry point. Every native setup result is checked before
+constructing the endpoint.
+
+```cpp
+#include <array>
+#include <cstddef>
+#include <cstdio>
+#include <span>
+
+#include <ESPressio_Serial_ESP_IDF.hpp>
+#include <freertos/FreeRTOS.h>
+#include <freertos/task.h>
+
+#ifndef TUTORIAL_UART_TX_GPIO
+#error "Select an unused UART TX GPIO in the application build flags."
+#endif
+#ifndef TUTORIAL_UART_RX_GPIO
+#error "Select an unused UART RX GPIO in the application build flags."
+#endif
+
+/// Application bootstrap; the ESP-IDF framework owns this entry point.
+extern "C" void app_main() {
+    namespace Serial = ESPressio::Serial;
+    constexpr auto port = UART_NUM_1;
+
+    // Do not take over a UART driver owned by another application component.
+    if (uart_is_driver_installed(port)) {
+        std::printf("UART1 is already owned; setup stopped.\n");
+        return;
+    }
+
+    uart_config_t config{};
+    config.baud_rate = 115200;
+    config.data_bits = UART_DATA_8_BITS;
+    config.parity = UART_PARITY_DISABLE;
+    config.stop_bits = UART_STOP_BITS_1;
+    config.flow_ctrl = UART_HW_FLOWCTRL_DISABLE;
+    config.source_clk = UART_SCLK_DEFAULT;
+
+    auto error = uart_param_config(
+        port,
+        &config
+    );
+    if (error != ESP_OK) {
+        std::printf(
+            "UART configuration failed: %d\n",
+            static_cast<int>(error)
+        );
+        return;
+    }
+    error = uart_set_pin(
+        port,
+        TUTORIAL_UART_TX_GPIO,
+        TUTORIAL_UART_RX_GPIO,
+        UART_PIN_NO_CHANGE,
+        UART_PIN_NO_CHANGE
+    );
+    if (error != ESP_OK) {
+        std::printf(
+            "UART pin setup failed: %d\n",
+            static_cast<int>(error)
+        );
+        return;
+    }
+    error = uart_driver_install(
+        port,
+        256,
+        0,       // Required: no TX software ring buffer.
+        0,
+        nullptr,
+        0
+    );
+    if (error != ESP_OK) {
+        std::printf(
+            "UART driver installation failed: %d\n",
+            static_cast<int>(error)
+        );
+        return;
+    }
+
+    // Static application state survives an incomplete or failed attempt.
+    static Serial::ESP_IDF::UartFifoByteStreamWriter endpoint(port);
+    static constexpr std::array<std::byte, 6U> message{
+        std::byte{'H'}, std::byte{'e'}, std::byte{'l'},
+        std::byte{'l'}, std::byte{'o'}, std::byte{'\n'}
+    };
+    static std::size_t offset{0U};
+    static_assert(Serial::ByteWriteEndpoint<decltype(endpoint)>);
+
+    for (unsigned opportunity = 0U; opportunity < 16U; ++opportunity) {
+        const auto result = Serial::TryWriteComplete(
+            endpoint,
+            std::span<const std::byte>(message).subspan(offset)
+        );
+        offset += result.BytesAccepted;
+        if (result.IsComplete()) {
+            break;
+        }
+        if (result.Status != Serial::WriteAttemptStatus::WouldBlock) {
+            std::printf(
+                "Output failed: status=%u, accepted=%zu; driver retained.\n",
+                static_cast<unsigned>(result.Status),
+                offset
+            );
+            return;
+        }
+        if (opportunity + 1U < 16U) {
+            vTaskDelay(1U); // Yield before a later application service opportunity.
+        }
+    }
+
+    if (offset != message.size()) {
+        std::printf(
+            "Output pending after %zu bytes; driver retained.\n",
+            offset
+        );
+        return;
+    }
+
+    // Full FIFO acceptance still does not mean the last bit has left the UART.
+    error = uart_wait_tx_done(
+        port,
+        pdMS_TO_TICKS(100U)
+    );
+    if (error != ESP_OK) {
+        std::printf(
+            "TX drain unconfirmed: %d; driver retained.\n",
+            static_cast<int>(error)
+        );
+        return;
+    }
+    error = uart_driver_delete(port);
+    if (error != ESP_OK) {
+        std::printf(
+            "UART driver release failed: %d\n",
+            static_cast<int>(error)
+        );
+        return;
+    }
+    std::printf("Hello accepted; local UART TX completed; driver released.\n");
+}
+```
+
+Build with `pio run -e esp32dev`. Connect and configure your chosen receiver
+before uploading firmware to your own selected board. This program actively
+configures the pins you supplied; the repository's maintained demos instead
+default to no UART activity.
+
+### 4. Understand partial writes and backpressure
+
+`TryWriteComplete` may make several immediately progressing provider calls.
+It returns as soon as the endpoint reports `WouldBlock`, failure or a contract
+violation. `BytesAccepted` describes the prefix accepted during that call;
+the application adds it to `offset` and supplies only the remaining suffix on
+the next service opportunity. Resending the whole message would duplicate bytes.
+
+The example permits at most 16 service opportunities and yields one FreeRTOS
+tick between blocked attempts. This is a finite application policy, not a
+hard end-to-end timing guarantee. A production application should integrate
+the retained state with its existing service context and recovery policy.
+
+If the budget expires, the example reports pending output and retains the
+driver, endpoint, message and offset. It does not automatically resume after
+`app_main` returns. A longer-lived application owner must continue servicing
+that suffix or explicitly reconcile abandonment. On provider failure or a
+contract violation, investigate the endpoint before further output; do not
+blindly restart the message.
+
+### 5. Drain and release resources deliberately
+
+Only after every byte is accepted does the example call the SDK's finite
+`uart_wait_tx_done`. Successful local TX completion allows this exclusively
+owned driver to be deleted. If completion is unconfirmed, the application
+keeps the driver installed. Neither this wait nor a successful delete proves
+peer receipt or durable logging.
+
+Keep UART configuration and driver lifetime stable while any write is in
+flight. The endpoint is ordinary-context only; it supplies no synchronization
+for competing writers. For complete framed output, use EDP-Serial's
+[progressive frame-pump and queue guide](https://github.com/ESPressio-Development-Platform/EDP-Serial/blob/main/README.MD).
+Those optional components add dependencies and application-owned service and
+synchronization requirements.
 
 ## Dependencies
 
-This **concrete IDF-backed** repository imports EDP-Serial directly, which imports EDP-System's Composition capability. Its native target SDK must provide `esp_driver_uart`; no reverse dependency on this concrete is allowed from EDP-Serial or EDP-Logging.
+The basic UART walkthrough activates only the mandatory edges. Optional
+Serial headers impose the following additional application dependencies;
+constructing this provider alone does not activate them.
 
 ```text
-EDP-Serial-ESP-IDF [ESP32 IDF-backed UART concrete]
-├── EDP-Serial [mandatory abstract ByteStreamWriter]
-│   └── EDP-System [mandatory Composition]
-└── ESP-IDF esp_driver_uart [mandatory native target SDK, not an EDP library]
+EDP-Serial-ESP-IDF
+├── ESP-IDF esp_driver_uart [mandatory native SDK]
+└── EDP-Serial [mandatory byte endpoint]
+    ├── EDP-System [mandatory: default byte endpoint and Composition]
+    ├── EDP-Logging [optional: import EdlgFramePump.hpp or BoundedEdlgFrameQueue.hpp]
+    │   └── EDP-Memory [imposed by Logging's EdlgFrameWriter.hpp]
+    │       ├── EDP-System
+    │       ├── EDP-Platform
+    │       │   └── EDP-System
+    │       └── EDP-BoundedTopology
+    ├── EDP-Platform-Portable [optional: import BoundedEdlgFrameQueue.hpp]
+    │   ├── EDP-Platform
+    │   │   └── EDP-System
+    │   └── EDP-Memory
+    │       ├── EDP-System
+    │       ├── EDP-Platform
+    │       │   └── EDP-System
+    │       └── EDP-BoundedTopology
+    ├── EDP-Platform [optional: import BoundedEdlgFrameQueue.hpp]
+    │   └── EDP-System
+    └── EDP-Threading [optional: import BoundedEdlgFrameQueue.hpp]
+        ├── EDP-System
+        ├── EDP-Platform
+        │   └── EDP-System
+        ├── EDP-Clock
+        │   ├── EDP-System
+        │   └── EDP-Platform
+        │       └── EDP-System
+        ├── EDP-BoundedTopology
+        └── EDP-Memory
+            ├── EDP-System
+            ├── EDP-Platform
+            │   └── EDP-System
+            └── EDP-BoundedTopology
 ```
 
-Optional full framed output is **not auto-activated**: an application importing EDP-Serial's `EdlgFramePump` must separately declare EDP-Logging, while importing its `BoundedEdlgFrameQueue` additionally selects the EDP-Threading ordinary Mutex and EDP-Platform SpinLock contracts. The native UART driver is selected/configured by Bootstrap with **TX software ring = 0**; Arduino-ESP32 eligibility requires an IDF-backed compatible core and does not imply a generic Arduino provider. See [Dependency Graph](./DEPENDENCY_GRAPH.MD) and [Wiki Dependency Contracts](./wiki/Dependency-Contracts.md). All EDP libraries remain **0.1.0**.
+The queue's Portable header remains a dependency even with a custom copy
+provider. The native ESP-IDF component declares
+`REQUIRES esp_driver_uart edp_serial`; a direct ESP-IDF CMake integration must
+supply an `edp_serial` component exposing EDP-Serial and EDP-System headers.
+The PlatformIO recipes resolve these libraries through their GitHub URLs.
+See the [complete dependency graph](./DEPENDENCY_GRAPH.MD).
 
-## Purpose and public composition contract
+## Documentation and examples
 
-`#include <ESPressio_Serial_ESP_IDF.hpp>` provides `ESPressio::Serial::ESP_IDF::UartFifoByteStreamWriter`, a concrete EDP-System Composition `Provider<Serial::Domain,Offers<Offer<Serial::ByteStreamWriter>>>`, with typed `ByteWriteResult TryWrite(std::span<const std::byte>) noexcept`. The class is non-copyable, non-movable, and constructed explicitly with one **application-selected `uart_port_t`** (e.g. `UART_NUM_1`). It exposes `Port()` for inspection. No UART peripheral, pins, baud, driver, native Queue, IRQ, global console, DMA buffer or worker is silently allocated here.
+- [Architecture and UART ownership contract](./docs/ARCHITECTURE.MD)
+- [Three-target UART demonstration](./demos/UartFifoByteStreamWriter/README.MD): Arduino IDE, PlatformIO Arduino-ESP32 and PlatformIO ESP-IDF
+- [Demo index](./demos/README.MD)
+- [Developer Wiki](./wiki/Home.md), [public API](./wiki/Public-API.md) and [build/test qualification](./wiki/Build-Test-and-Source.md)
+- [Changelog](./CHANGELOG.md) and [license](./LICENSE)
 
-**Bootstrap must configure the ESP-IDF UART** via native IDF API (`uart_param_config`, `uart_set_pin`, `uart_driver_install` with **TX ring-buffer size exactly ZERO**); own its lifecycle and the selected port; and bind this concrete instance to the EDP-Serial **exclusive ByteStreamWriter** capability using EDP-System Composition. It must prevent any other user (`printf`, IDF console, another sink/queue, app diagnostics) writing to the same UART outside the composed Serial frame queue. The application chooses ALL hardware pins; there are no hardcoded board pins and no automatic peripheral installation.
-
-`TryWrite` rejects an invalid UART port or uninstalled driver with typed `ProviderFailure`, and only for a correctly configured port issues exactly one **`uart_tx_chars(port,bytes,UINT32-safeCount)`**. ESP-IDF v5.5.5 documents this as immediate nonblocking transfer to currently available **hardware TX FIFO** capacity (never waits for enough space). A native count 0 maps to `WouldBlock`, positive count bounded by offered bytes to `Accepted`, negative/error/out-of-range count to `ProviderFailure`. The provided source memory is fully copied into native UART FIFO *before* returning Accepted, so it never retains a borrowed `span`; it is suitable for the EDP-Serial ByteStreamWriter ownership contract.
-
-**Accepted bytes are NOT proof of transmitted-on-wire, host-received, flushed or durable LogRecord delivery.** A UART FIFO can retain bytes after TryWrite returns and later lose them on power loss. No native `uart_wait_tx_done` or implicit blocking spin/sleep is performed. EDP-Serial's higher-level EDLG pump and bounded FIFO are still opt-in application components, not automatically activated by this provider. This class is strictly **ordinary-context**, not ISR-safe.
-
-## Dependencies and build
-
-PlatformIO demo projects declare their library dependencies as GitHub URLs
-in lib_deps. Run their pio commands directly with the repository-owned demo
-source/assets present; dependency resolution does not require sibling
-library checkouts. See the [demo index](./demos/README.MD).
-
-
-- **Mandatory direct EDP library:** `EDP-Serial` `0.1.0` (which consumes `EDP-System` Composition).
-- **Platform-only SDK dependency:** ESP-IDF **`esp_driver_uart`** component. The owner `CMakeLists.txt` declares `REQUIRES esp_driver_uart edp_serial`, where the application must provide a CMake component named `edp_serial` exposing the actual EDP-Serial abstract headers (and its dependent EDP-System headers). No legacy `ESPressio-*` library is permitted.
-- PlatformIO metadata `library.json` declares package `0.1.0`, `frameworks: [arduino, espidf]`, `platforms: [espressif32]`, and **EDP-Serial** dependency. A C++20-compatible **ESP32 Arduino core exposing the ESP-IDF 5.x UART driver** may also instantiate this exact native provider. This is not an Arduino-generic transport and is unrelated to the empty `EDP-Serial-Arduino` placeholder; incompatible Arduino platforms must be rejected.
-- **Optional application dependency:** if using `serial/BoundedEdlgFrameQueue.hpp`, the application additionally explicitly declares `EDP-Logging` and `EDP-Threading` as specified by EDP-Serial's conditional dependency graph.
-
-## Tests and outstanding qualification
-
-`tests/run_host_tests.sh` supplies a **fake IDF uart.h** and scripted uart_tx_chars stub, but imports REAL `EDP-Serial`/`EDP-System` abstractions. GCC and Clang HOST suites PASSED on RPI400 run **20261016T090647-02bb7051** and test invalid ports, uninstalled driver, FIFO full, partial accepted count, negative/error/invalid provider count, empty input, and exact provider Composition contract. This fake-host test alone **cannot** establish real IDF compatibility or hardware output.
-
-**RPI400 ESP-IDF v5.5.5 full ESP32 C++20 component compilation AND ELF link PASSED**, detached run **20261016T090824-aed310a8**, with the actual provider and native esp_driver_uart API. A scratch application was used, with actual owner `UartFifoByteStreamWriter` and `esp_driver_uart`; fixture lives at `/srv/espressio/scratch/gpt6-serial-idf-build-smoke-20261016`. This fixture is compile/link only, and must **NOT** be flashed onto the shared development boards; no UART pins/USB port were configured on any physical device.
-
-**Still open:** ESP32 UART RX/loopback/scope tests and host capture of complete EDLG frames, baud/peripheral and console ownership, FreeRTOS scheduling/jitter, end-to-end accepted→wire→received guarantees, serial flush/power-loss semantics, full app Composition Bootstrap, Serial-Arduino concrete implementation, and target ESP32-S3 variant qualification. The native UART FIFO may be capacity-limited and callers must use the existing bounded retry/FIFO worker; there is no producer-blocking API or hidden Queue here.
-
-[Architecture](docs/ARCHITECTURE.MD) • [Dependency Graph](DEPENDENCY_GRAPH.MD) • [Wiki](wiki/Home.md).
-
-### Additional actual target build evidence (2026-10-16)
-
-- **ESP32-S3, ESP-IDF v5.5.5:** independent full firmware C++20 compile and ELF link **PASS** detached RPI400 run `20261016T091324-d99b12b1`. This is a variant build, NOT an on-device stopwatch/UART test.
-- **ESP32-WROOM-class end-to-end header/link smoke:** real C++20 EDP-Logging EDLG frame writer → optional EDP-Serial bounded FIFO → this concrete UART FIFO provider compiled and linked as **one ESP-IDF application** with actual EDP-System/Threading/Clock/Memory/Platform abstraction include components, **PASS** detached run `20261016T091604-f40040e3`. The fixture used a SYNTHETIC Composition mutex and a runtime-disabled write branch; it proves source/target linkage, NOT real FreeRTOS synchronization, delivery or physical UART throughput. Fixture source remains under `/srv/espressio/scratch/gpt6-serial-idf-build-smoke-20261016` and must NEVER be flashed as if it were a fully bootstrapped application.
-
-## V2 demonstrations and public-release readiness — 12 November 2026
-
-[UartFifoByteStreamWriter](demos/UartFifoByteStreamWriter/README.MD) provides all **three V2 example layouts**: Arduino IDE using the ESP32 Arduino core's underlying IDF UART API, PlatformIO Arduino-ESP32, and native PlatformIO ESP-IDF. The **safe default does not install a UART driver, select TX/RX pins, write to the system console or flash a device**. Opting into actual native TX requires the application to provide both `EDP_SERIAL_DEMO_TX_GPIO` and `EDP_SERIAL_DEMO_RX_GPIO`, reserve UART1/pins exclusively, and accept that a nonblocking `uart_tx_chars` result confirms only native FIFO acceptance, **not** delivery to a host. RPI400 run `20261112T115923-1e73e5a0` passed the GCC and Clang host checks and both actual Arduino-ESP32 and ESP-IDF demo firmware builds. The demo's default path uses `UART_NUM_MAX` to check the invalid-port result without installing a driver. Physical UART delivery is exercised in the separately composed Logging G1 fixture.
-
-The [0.1.0 changelog](CHANGELOG.md), [V2 developer Wiki](wiki/Home.md) and [source dependency graph](DEPENDENCY_GRAPH.MD) document the exact provider ownership. No version bump or release tag is implied. Downstream full EDLG Serial/Logging application assembly must also acquire a real keyed Threading Mutex; the bundled Serial queue demo's simulated single-context Mutex is never a production Threading concrete.
+The provider requires a compatible IDF UART API; it is not a generic Arduino
+transport. Host tests and target builds have separate scopes from physical
+UART qualification. The linked build/test guide records their evidence and
+limits.
